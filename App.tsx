@@ -134,6 +134,7 @@ export default function App() {
             </>
           )}
 
+          {/* Calibrate Text Link */}
           {permissionGranted && (
              <div className="col-span-2 text-center mt-2">
                <button 
@@ -144,6 +145,13 @@ export default function App() {
                </button>
              </div>
           )}
+
+          {/* Copyright */}
+          <div className="col-span-2 text-center mt-4">
+            <p className="text-[10px] text-gray-700 uppercase tracking-widest font-bold">
+              © {new Date().getFullYear()} Vesa Perasto
+            </p>
+          </div>
         </div>
       </footer>
     </div>
