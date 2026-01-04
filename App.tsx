@@ -4,6 +4,7 @@ import { CompassDial } from './components/CompassDial';
 import { TacticalButton } from './components/TacticalButton';
 import { WeatherModal } from './components/WeatherModal';
 import { SettingsModal } from './components/SettingsModal';
+import { Notification } from './components/Notification';
 import { Maximize, Minimize, Navigation, Lock, LockOpen, Cloud, Settings } from 'lucide-react';
 
 export default function App() {
@@ -12,6 +13,7 @@ export default function App() {
   const [isLocked, setIsLocked] = useState(false);
   const [isWeatherOpen, setIsWeatherOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
   
   // Settings State
   const [compassSettings, setCompassSettings] = useState({
@@ -31,9 +33,14 @@ export default function App() {
     }
   }, []);
 
+  const showNotification = (msg: string) => {
+    setNotification(msg);
+  };
+
   const saveSettings = (newSettings: { invert: boolean; offset: number }) => {
     setCompassSettings(newSettings);
     localStorage.setItem('compassi_settings', JSON.stringify(newSettings));
+    showNotification("Asetukset tallennettu");
   };
 
   // Calculate adjusted heading based on settings
@@ -69,7 +76,7 @@ export default function App() {
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => {
-        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        showNotification("Ei tuettu selaimessa");
       });
     } else {
       if (document.exitFullscreen) {
@@ -81,18 +88,40 @@ export default function App() {
   const toggleOrientationLock = async () => {
     // Cast to any because standard TypeScript definitions for ScreenOrientation might be missing lock/unlock
     const orientation = screen.orientation as any;
-    if (!orientation || !orientation.lock) return;
+    
+    if (!orientation || !orientation.lock) {
+      showNotification("Ei tuettu laitteella");
+      return;
+    }
+
     try {
       if (isLocked) {
         orientation.unlock();
         setIsLocked(false);
+        showNotification("Lukitus poistettu");
       } else {
         await orientation.lock('portrait');
         setIsLocked(true);
+        showNotification("Suunta lukittu");
       }
     } catch (e) {
-      console.warn('Orientation lock not supported or failed', e);
+      console.warn('Orientation lock failed', e);
+      // Specific error messaging
+      if (e instanceof Error && e.message.includes('not supported')) {
+         showNotification("Ei tuettu tällä laitteella");
+      } else {
+         showNotification("Lukitus vaatii koko näytön");
+      }
     }
+  };
+
+  const handleCalibrationRequest = () => {
+    // Physical calibration instruction
+    showNotification("Tee 8-liike laitteella");
+    // Also request access again just in case permissions were lost
+    requestAccess();
+    // Open settings for manual offset as that's the "software calibration"
+    setTimeout(() => setIsSettingsOpen(true), 1500);
   };
 
   // Listen for fullscreen changes
@@ -107,6 +136,8 @@ export default function App() {
   return (
     <div className="min-h-[100dvh] h-[100dvh] w-full bg-black text-white flex flex-col items-center justify-between font-mono overflow-hidden relative">
       
+      <Notification message={notification} onClear={() => setNotification(null)} />
+
       {/* Modals */}
       <WeatherModal isOpen={isWeatherOpen} onClose={() => setIsWeatherOpen(false)} />
       <SettingsModal 
@@ -212,10 +243,10 @@ export default function App() {
           {permissionGranted && (
              <div className="col-span-2 text-center mt-2">
                <button 
-                 onClick={requestAccess} 
+                 onClick={handleCalibrationRequest}
                  className="text-[10px] text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
                >
-                 [ Uudelleenkalibrointi ]
+                 [ Kalibrointi & Asetukset ]
                </button>
              </div>
           )}
