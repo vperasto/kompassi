@@ -5,6 +5,7 @@ interface CompassDialProps {
   heading: number;
 }
 
+// Visual layout: 0 is Top (North), 90 is Right (East)
 const CARDINALS: CardinalPoint[] = [
   { label: 'P', degree: 0 },
   { label: 'KO', degree: 45 },
@@ -74,7 +75,7 @@ export const CompassDial: React.FC<CompassDialProps> = ({ heading }) => {
             className="absolute top-0 left-1/2 -translate-x-1/2 origin-[50%_50%] h-full pointer-events-none"
             style={{ transform: `rotate(${cardinal.degree}deg)` }}
           >
-            <div className="mt-8 font-mono font-bold text-xl text-white tracking-tighter">
+            <div className={`mt-8 font-mono font-bold text-white tracking-tighter ${cardinal.label.length > 1 ? 'text-lg text-gray-200' : 'text-xl'}`}>
               {cardinal.label}
             </div>
           </div>
@@ -87,7 +88,7 @@ export const CompassDial: React.FC<CompassDialProps> = ({ heading }) => {
            className="absolute top-0 left-1/2 -translate-x-1/2 origin-[50%_50%] h-full pointer-events-none"
            style={{ transform: `rotate(${deg}deg)` }}
          >
-           <div className="mt-16 font-mono text-xs text-gray-400">
+           <div className="mt-16 font-mono text-xs text-gray-500 font-bold">
              {deg}
            </div>
          </div>

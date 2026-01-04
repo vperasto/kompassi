@@ -22,22 +22,40 @@ export const useOrientation = () => {
     setPermission((prev) => ({ ...prev, required: isIOS, granted: !isIOS }));
   }, []);
 
+  const getOrientationOffset = () => {
+    // Check screen orientation to compensate for Landscape/Portrait modes
+    if (window.screen?.orientation?.angle !== undefined) {
+      return window.screen.orientation.angle;
+    }
+    if (typeof window.orientation === 'number') {
+      return window.orientation;
+    }
+    return 0;
+  };
+
   const handleOrientation = useCallback((event: DeviceOrientationEvent) => {
     let heading = 0;
     let isAbsolute = false;
 
-    // iOS specific property
+    // iOS specific property (Webkit)
     if (typeof (event as any).webkitCompassHeading === 'number') {
       heading = (event as any).webkitCompassHeading;
+      // iOS usually handles screen orientation internally in this property, 
+      // but sometimes adding window.orientation is needed depending on version.
+      // Usually keeping it as is works best for iOS.
+      heading = heading + getOrientationOffset(); 
       isAbsolute = true;
     } 
     // Android / Standard
     else if (event.alpha !== null) {
-      // alpha is the device's rotation around the z-axis. 
-      // It creates a counter-clockwise rotation, so we invert it.
-      // Note: Without 'absolute' property or deviceorientationabsolute event, 
-      // this is relative to the device's initial position on some Android devices.
+      // alpha is the device's rotation around the z-axis.
+      // 0 is North, increasing counter-clockwise on Android usually.
       heading = 360 - event.alpha;
+      
+      // Critical: Compensate for screen orientation (Portrait vs Landscape)
+      // This fixes the 90-degree error often seen when pointing South but showing West.
+      heading -= getOrientationOffset();
+
       if ((event as any).absolute) {
         isAbsolute = true;
       }
@@ -69,8 +87,6 @@ export const useOrientation = () => {
         console.error(e);
       }
     } else {
-      // Non-iOS devices usually don't need explicit permission trigger, 
-      // but if we are here, we attach the listener.
       setPermission({ granted: true, required: false });
       window.addEventListener('deviceorientation', handleOrientation, true);
     }
