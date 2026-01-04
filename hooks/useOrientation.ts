@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { CompassState, PermissionState } from '../types';
 
 export const useOrientation = () => {
@@ -14,6 +14,9 @@ export const useOrientation = () => {
   });
 
   const [error, setError] = useState<string | null>(null);
+  
+  // Track if we have received an absolute event to prevent fallback jitter
+  const hasAbsoluteRef = useRef(false);
 
   // Check if permission is required (iOS 13+)
   useEffect(() => {
@@ -33,35 +36,38 @@ export const useOrientation = () => {
     return 0;
   };
 
+  // Handler for iOS and standard DeviceOrientation
   const handleOrientation = useCallback((event: DeviceOrientationEvent) => {
+    // If we are already receiving better data from 'deviceorientationabsolute', ignore standard event on Android
+    // iOS doesn't fire absolute event, so it continues here.
+    if (hasAbsoluteRef.current && !(event as any).webkitCompassHeading) {
+      return;
+    }
+
     let heading = 0;
     let isAbsolute = false;
 
-    // iOS specific property (Webkit)
+    // iOS specific property (Webkit) - Always Absolute
     if (typeof (event as any).webkitCompassHeading === 'number') {
       heading = (event as any).webkitCompassHeading;
-      // iOS usually handles screen orientation internally in this property, 
-      // but sometimes adding window.orientation is needed depending on version.
-      // Usually keeping it as is works best for iOS.
+      // iOS usually accounts for orientation in webkitCompassHeading, but sometimes needs adjustment
+      // depending on the exact iOS version/browser. For most consistency, we add the offset here
+      // matching the logic that landscape rotates the view.
       heading = heading + getOrientationOffset(); 
       isAbsolute = true;
     } 
-    // Android / Standard
+    // Standard Fallback (likely relative on modern Android Chrome)
     else if (event.alpha !== null) {
-      // alpha is the device's rotation around the z-axis.
-      // 0 is North, increasing counter-clockwise on Android usually.
       heading = 360 - event.alpha;
-      
-      // Critical: Compensate for screen orientation (Portrait vs Landscape)
-      // This fixes the 90-degree error often seen when pointing South but showing West.
+      // Compensate for screen orientation
       heading -= getOrientationOffset();
-
+      
       if ((event as any).absolute) {
         isAbsolute = true;
       }
     }
 
-    // Normalize to 0-360
+    // Normalize
     heading = heading % 360;
     if (heading < 0) heading += 360;
 
@@ -72,13 +78,36 @@ export const useOrientation = () => {
     });
   }, []);
 
+  // Handler specifically for Android Absolute Orientation
+  const handleAbsoluteOrientation = useCallback((event: DeviceOrientationEvent) => {
+    if (event.alpha !== null) {
+      hasAbsoluteRef.current = true;
+      
+      // Calculate heading
+      let heading = 360 - event.alpha;
+      
+      // Critical: Subtract screen orientation
+      heading -= getOrientationOffset();
+
+      // Normalize
+      heading = heading % 360;
+      if (heading < 0) heading += 360;
+
+      setCompassState({
+        heading,
+        accuracy: (event as any).webkitCompassAccuracy || 0,
+        isAbsolute: true, // This event is always absolute
+      });
+    }
+  }, []);
+
   const requestAccess = async () => {
     if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
       try {
         const response = await (DeviceOrientationEvent as any).requestPermission();
         if (response === 'granted') {
           setPermission({ granted: true, required: true });
-          window.addEventListener('deviceorientation', handleOrientation);
+          startListeners();
         } else {
           setError('Lupa evätty. Salli anturit asetuksista.');
         }
@@ -88,18 +117,31 @@ export const useOrientation = () => {
       }
     } else {
       setPermission({ granted: true, required: false });
-      window.addEventListener('deviceorientation', handleOrientation, true);
+      startListeners();
+    }
+  };
+
+  const startListeners = () => {
+    // Standard/iOS
+    window.addEventListener('deviceorientation', handleOrientation, true);
+    
+    // Android Absolute (Chrome 50+)
+    if ('ondeviceorientationabsolute' in window) {
+      window.addEventListener('deviceorientationabsolute' as any, handleAbsoluteOrientation, true);
     }
   };
 
   useEffect(() => {
     if (permission.granted) {
-      window.addEventListener('deviceorientation', handleOrientation, true);
+      startListeners();
     }
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation);
+      if ('ondeviceorientationabsolute' in window) {
+        window.removeEventListener('deviceorientationabsolute' as any, handleAbsoluteOrientation);
+      }
     };
-  }, [permission.granted, handleOrientation]);
+  }, [permission.granted, handleOrientation, handleAbsoluteOrientation]);
 
   return {
     heading: compassState.heading,
