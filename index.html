@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Compassi</title>
+    <meta name="description" content="Taktinen kompassi" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Tactical Scrollbar Hide */
+      body {
+        -webkit-user-select: none;
+        user-select: none;
+        background-color: #000000;
+        color: #ffffff;
+        overscroll-behavior: none;
+      }
+      /* Safe area utilities not covered by default Tailwind */
+      .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      .pt-safe {
+        padding-top: env(safe-area-inset-top);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
