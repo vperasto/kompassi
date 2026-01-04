@@ -147,8 +147,9 @@ export default function App() {
     cardinalText: isNightMode ? 'text-red-800' : 'text-gray-300'
   };
 
-  // Shared button style for header - Slightly reduced padding for tighter fit
-  const headerBtnClass = `p-2 sm:p-2.5 border transition-colors ${isNightMode ? 'border-red-900 hover:bg-red-900/20 text-red-600' : 'border-gray-700 hover:bg-gray-800 active:bg-white active:text-black'}`;
+  // Shared button style for header - Responsive padding
+  // Mobile: p-1.5 (tighter), Desktop: p-2.5
+  const headerBtnClass = `p-1.5 sm:p-2.5 border transition-colors ${isNightMode ? 'border-red-900 hover:bg-red-900/20 text-red-600' : 'border-gray-700 hover:bg-gray-800 active:bg-white active:text-black'}`;
 
   return (
     <div className={`h-[100dvh] w-full bg-black ${theme.text} flex flex-col font-mono overflow-hidden relative transition-colors duration-500`}>
@@ -178,14 +179,16 @@ export default function App() {
 
       {/* Header - Fixed Height */}
       <header className={`w-full flex-none p-2 pt-safe z-10 flex justify-between items-center border-b backdrop-blur-sm transition-colors duration-500 ${theme.bgHeader}`}>
-        <div>
-          <h1 className={`text-xl sm:text-2xl font-bold tracking-widest border-l-4 pl-3 leading-none ${isNightMode ? 'border-red-600' : 'border-white'}`}>
+        
+        {/* Title Container - Responsive text size, allows shrinking but keeps border */}
+        <div className="flex-shrink min-w-0 mr-1 sm:mr-4">
+          <h1 className={`text-base sm:text-2xl font-bold tracking-widest border-l-4 pl-2 sm:pl-3 leading-none truncate ${isNightMode ? 'border-red-600' : 'border-white'}`}>
             COMPASSI
           </h1>
         </div>
         
-        {/* Top Toolbar - All controls moved here */}
-        <div className="flex gap-1.5 sm:gap-2">
+        {/* Top Toolbar - Tighter spacing on mobile (gap-1) */}
+        <div className="flex gap-1 sm:gap-2 flex-none">
              <button 
                 onClick={toggleOrientationLock}
                 className={`${headerBtnClass} ${isLocked ? (isNightMode ? 'bg-red-600 text-black' : 'bg-white text-black') : ''}`}
