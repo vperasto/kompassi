@@ -18,9 +18,10 @@ interface LocationData {
 interface WeatherModalProps {
   isOpen: boolean;
   onClose: () => void;
+  isNightMode?: boolean;
 }
 
-export const WeatherModal: React.FC<WeatherModalProps> = ({ isOpen, onClose }) => {
+export const WeatherModal: React.FC<WeatherModalProps> = ({ isOpen, onClose, isNightMode = false }) => {
   const [loading, setLoading] = useState(false);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [location, setLocation] = useState<LocationData | null>(null);
@@ -124,16 +125,27 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({ isOpen, onClose }) =
 
   if (!isOpen) return null;
 
+  const colors = {
+    bg: 'bg-black',
+    border: isNightMode ? 'border-red-600' : 'border-white',
+    text: isNightMode ? 'text-red-600' : 'text-white',
+    textDim: isNightMode ? 'text-red-800' : 'text-gray-500',
+    inputBg: isNightMode ? 'bg-red-900/10' : 'bg-gray-900',
+    inputBorder: isNightMode ? 'border-red-900' : 'border-gray-700',
+    buttonBg: isNightMode ? 'bg-red-600 text-black hover:bg-red-500' : 'bg-white text-black hover:bg-gray-200',
+    iconDim: isNightMode ? 'text-red-800' : 'text-gray-400'
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="w-full max-w-sm bg-black border-2 border-white p-6 relative shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+      <div className={`w-full max-w-sm ${colors.bg} border-2 ${colors.border} ${colors.text} p-6 relative shadow-2xl transition-colors`}>
         
         {/* Header */}
-        <div className="flex justify-between items-center mb-6 border-b border-gray-800 pb-4">
+        <div className={`flex justify-between items-center mb-6 border-b ${isNightMode ? 'border-red-900' : 'border-gray-800'} pb-4`}>
           <h2 className="text-xl font-bold tracking-widest flex items-center gap-2">
             <Cloud size={20} /> SÄÄTILA
           </h2>
-          <button onClick={onClose} className="hover:bg-gray-800 p-1">
+          <button onClick={onClose} className={`hover:bg-gray-800 p-1 transition-colors ${isNightMode ? 'hover:bg-red-900/30' : ''}`}>
             <X size={24} />
           </button>
         </div>
@@ -147,21 +159,21 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({ isOpen, onClose }) =
              </div>
           ) : view === 'settings' ? (
             <form onSubmit={handleSearch} className="flex flex-col gap-4">
-              <label className="text-xs text-gray-400 uppercase tracking-widest">Aseta Sijainti</label>
+              <label className={`text-xs uppercase tracking-widest ${colors.textDim}`}>Aseta Sijainti</label>
               <div className="relative">
                 <input 
                   type="text" 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Esim. Helsinki"
-                  className="w-full bg-gray-900 border border-gray-700 p-3 pl-10 text-white font-mono focus:border-white outline-none uppercase"
+                  className={`w-full ${colors.inputBg} border ${colors.inputBorder} p-3 pl-10 font-mono focus:border-current outline-none uppercase ${colors.text}`}
                   autoFocus
                 />
-                <Search className="absolute left-3 top-3.5 text-gray-500" size={16} />
+                <Search className={`absolute left-3 top-3.5 ${colors.textDim}`} size={16} />
               </div>
               <button 
                 type="submit"
-                className="bg-white text-black font-bold uppercase py-3 tracking-widest hover:bg-gray-200"
+                className={`font-bold uppercase py-3 tracking-widest transition-colors ${colors.buttonBg}`}
               >
                 Tallenna & Hae
               </button>
@@ -171,7 +183,7 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({ isOpen, onClose }) =
                  <button 
                    type="button" 
                    onClick={() => setView('weather')}
-                   className="text-xs text-gray-500 underline mt-4"
+                   className={`text-xs underline mt-4 ${colors.textDim}`}
                  >
                    Peruuta
                  </button>
@@ -182,12 +194,12 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({ isOpen, onClose }) =
               {/* Location Display */}
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Sijainti</p>
+                  <p className={`text-xs uppercase tracking-widest mb-1 ${colors.textDim}`}>Sijainti</p>
                   <p className="text-lg font-bold leading-none">{location?.name || '---'}</p>
                 </div>
                 <button 
                   onClick={() => setView('settings')}
-                  className="p-2 border border-gray-800 hover:border-white transition-colors"
+                  className={`p-2 border transition-colors ${isNightMode ? 'border-red-900 hover:border-red-600' : 'border-gray-800 hover:border-white'}`}
                 >
                   <MapPin size={16} />
                 </button>
@@ -196,15 +208,15 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({ isOpen, onClose }) =
               {/* Weather Data Grid */}
               <div className="grid grid-cols-2 gap-4">
                 {/* Temp */}
-                <div className="border border-gray-800 p-4 flex flex-col items-center justify-center text-center h-24">
-                   <Cloud className="mb-2 text-gray-400" size={20} />
+                <div className={`border p-4 flex flex-col items-center justify-center text-center h-24 ${isNightMode ? 'border-red-900' : 'border-gray-800'}`}>
+                   <Cloud className={`mb-2 ${colors.iconDim}`} size={20} />
                    <span className="text-2xl font-bold">{weather?.temperature}°C</span>
-                   <span className="text-[10px] text-gray-500 uppercase mt-1">Lämpötila</span>
+                   <span className={`text-[10px] uppercase mt-1 ${colors.textDim}`}>Lämpötila</span>
                 </div>
                 {/* Wind */}
-                <div className="border border-gray-800 p-4 flex flex-col items-center justify-center text-center h-24">
+                <div className={`border p-4 flex flex-col items-center justify-center text-center h-24 ${isNightMode ? 'border-red-900' : 'border-gray-800'}`}>
                    <div className="flex items-center gap-1 mb-2">
-                     <Wind className="text-gray-400" size={20} />
+                     <Wind className={colors.iconDim} size={20} />
                      {weather && (
                        <div 
                          style={{ transform: `rotate(${weather.windDirection}deg)` }}
@@ -215,25 +227,25 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({ isOpen, onClose }) =
                      )}
                    </div>
                    <span className="text-2xl font-bold">{weather?.windSpeed}</span>
-                   <span className="text-[10px] text-gray-500 uppercase mt-1">m/s</span>
+                   <span className={`text-[10px] uppercase mt-1 ${colors.textDim}`}>m/s</span>
                 </div>
                 {/* Sunrise */}
-                 <div className="border border-gray-800 p-4 flex flex-col items-center justify-center text-center h-24">
-                   <Sunrise className="mb-2 text-gray-400" size={20} />
+                 <div className={`border p-4 flex flex-col items-center justify-center text-center h-24 ${isNightMode ? 'border-red-900' : 'border-gray-800'}`}>
+                   <Sunrise className={`mb-2 ${colors.iconDim}`} size={20} />
                    <span className="text-2xl font-bold">{weather?.sunrise}</span>
-                   <span className="text-[10px] text-gray-500 uppercase mt-1">Nousu</span>
+                   <span className={`text-[10px] uppercase mt-1 ${colors.textDim}`}>Nousu</span>
                 </div>
                 {/* Sunset */}
-                 <div className="border border-gray-800 p-4 flex flex-col items-center justify-center text-center h-24">
-                   <Sunset className="mb-2 text-gray-400" size={20} />
+                 <div className={`border p-4 flex flex-col items-center justify-center text-center h-24 ${isNightMode ? 'border-red-900' : 'border-gray-800'}`}>
+                   <Sunset className={`mb-2 ${colors.iconDim}`} size={20} />
                    <span className="text-2xl font-bold">{weather?.sunset}</span>
-                   <span className="text-[10px] text-gray-500 uppercase mt-1">Lasku</span>
+                   <span className={`text-[10px] uppercase mt-1 ${colors.textDim}`}>Lasku</span>
                 </div>
               </div>
 
               {error && <p className="text-red-500 text-xs text-center">{error}</p>}
               
-              <div className="text-[10px] text-center text-gray-600 font-mono mt-2">
+              <div className={`text-[10px] text-center font-mono mt-2 ${colors.textDim}`}>
                 Data: Open-Meteo API
               </div>
             </div>

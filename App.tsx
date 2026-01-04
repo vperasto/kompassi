@@ -1,20 +1,32 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useOrientation } from './hooks/useOrientation';
+import { usePosition } from './hooks/usePosition'; // Import Position Hook
 import { CompassDial } from './components/CompassDial';
 import { TacticalButton } from './components/TacticalButton';
 import { WeatherModal } from './components/WeatherModal';
 import { SettingsModal } from './components/SettingsModal';
 import { Notification } from './components/Notification';
-import { Maximize, Minimize, Navigation, Lock, LockOpen, Cloud, Settings } from 'lucide-react';
+import { formatCoordinates } from './utils/geoUtils'; // Import Utils
+import { Maximize, Minimize, Navigation, Lock, LockOpen, Cloud, Settings, Eye, EyeOff, Crosshair } from 'lucide-react';
+
+type CoordFormat = 'decimal' | 'etrs' | 'mgrs' | 'maidenhead';
 
 export default function App() {
   const { heading: rawHeading, permissionGranted, requestAccess, error, isAbsolute } = useOrientation();
+  const { lat, lon, accuracy, loading: gpsLoading, error: gpsError } = usePosition(); // Use Position
+  
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [isWeatherOpen, setIsWeatherOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   
+  // Tactical Modes
+  const [isNightMode, setIsNightMode] = useState(false);
+  
+  // Coordinate Format State
+  const [coordFormat, setCoordFormat] = useState<CoordFormat>('decimal');
+
   // Settings State
   const [compassSettings, setCompassSettings] = useState({
     invert: false,
@@ -124,6 +136,13 @@ export default function App() {
     setTimeout(() => setIsSettingsOpen(true), 1500);
   };
 
+  const cycleCoordFormat = () => {
+    const formats: CoordFormat[] = ['decimal', 'etrs', 'mgrs', 'maidenhead'];
+    const currentIndex = formats.indexOf(coordFormat);
+    const nextIndex = (currentIndex + 1) % formats.length;
+    setCoordFormat(formats[nextIndex]);
+  };
+
   // Listen for fullscreen changes
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -133,79 +152,121 @@ export default function App() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
+  // Theme Colors
+  const theme = {
+    text: isNightMode ? 'text-red-600' : 'text-white',
+    textDim: isNightMode ? 'text-red-900' : 'text-gray-400',
+    border: isNightMode ? 'border-red-600' : 'border-gray-800',
+    accent: isNightMode ? 'text-red-500' : 'text-green-500', // Active status
+    error: isNightMode ? 'text-red-800' : 'text-red-500',
+    bgHeader: isNightMode ? 'bg-black border-red-900' : 'bg-black/80 border-gray-800',
+    cardinalText: isNightMode ? 'text-red-800' : 'text-gray-300'
+  };
+
   return (
-    <div className="min-h-[100dvh] h-[100dvh] w-full bg-black text-white flex flex-col items-center justify-between font-mono overflow-hidden relative">
+    <div className={`min-h-[100dvh] h-[100dvh] w-full bg-black ${theme.text} flex flex-col items-center justify-between font-mono overflow-hidden relative transition-colors duration-500`}>
       
-      <Notification message={notification} onClear={() => setNotification(null)} />
+      <Notification message={notification} onClear={() => setNotification(null)} isNightMode={isNightMode} />
 
       {/* Modals */}
-      <WeatherModal isOpen={isWeatherOpen} onClose={() => setIsWeatherOpen(false)} />
+      <WeatherModal isOpen={isWeatherOpen} onClose={() => setIsWeatherOpen(false)} isNightMode={isNightMode} />
       <SettingsModal 
         isOpen={isSettingsOpen} 
         onClose={() => setIsSettingsOpen(false)} 
         onSave={saveSettings}
         currentSettings={compassSettings}
+        isNightMode={isNightMode}
       />
 
       {/* Background Grid Pattern for Tactical Look */}
       <div 
         className="absolute inset-0 z-0 pointer-events-none opacity-20"
         style={{
-          backgroundImage: 'linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px)',
+          backgroundImage: `linear-gradient(${isNightMode ? '#300' : '#333'} 1px, transparent 1px), linear-gradient(90deg, ${isNightMode ? '#300' : '#333'} 1px, transparent 1px)`,
           backgroundSize: '40px 40px'
         }}
       />
 
       {/* Header */}
-      <header className="w-full p-4 pt-safe z-10 flex justify-between items-start border-b border-gray-800 bg-black/80 backdrop-blur-sm">
+      <header className={`w-full p-4 pt-safe z-10 flex justify-between items-start border-b backdrop-blur-sm transition-colors duration-500 ${theme.bgHeader}`}>
         <div>
-          <h1 className="text-2xl font-bold tracking-widest border-l-4 border-white pl-3 leading-none">
+          <h1 className={`text-2xl font-bold tracking-widest border-l-4 pl-3 leading-none ${isNightMode ? 'border-red-600' : 'border-white'}`}>
             COMPASSI
           </h1>
-          <p className="text-xs text-gray-400 mt-1 pl-4 tracking-wider">
+          <p className={`text-xs mt-1 pl-4 tracking-wider ${theme.textDim}`}>
             SYSTEM: {isAbsolute ? 'GPS/MAG (ABS)' : 'RELATIIVINEN'}
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
-           <div className={`text-xs font-bold ${error ? 'text-red-500' : 'text-green-500'}`}>
+           <div className={`text-xs font-bold ${error ? theme.error : theme.accent}`}>
              {error ? 'VIRHE' : 'AKTIIVINEN'}
            </div>
-           <button 
-             onClick={() => setIsSettingsOpen(true)}
-             className="p-2 border border-gray-700 hover:bg-gray-800 active:bg-white active:text-black transition-colors"
-             aria-label="Asetukset"
-           >
-             <Settings size={18} />
-           </button>
+           
+           <div className="flex gap-2">
+            <button 
+                onClick={() => setIsNightMode(!isNightMode)}
+                className={`p-2 border transition-colors ${isNightMode ? 'border-red-900 bg-red-900/20 text-red-500 hover:bg-red-900/40' : 'border-gray-700 hover:bg-gray-800 active:bg-white active:text-black'}`}
+                aria-label="Yötila"
+              >
+                {isNightMode ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+             <button 
+               onClick={() => setIsSettingsOpen(true)}
+               className={`p-2 border transition-colors ${isNightMode ? 'border-red-900 hover:bg-red-900/20 text-red-600' : 'border-gray-700 hover:bg-gray-800 active:bg-white active:text-black'}`}
+               aria-label="Asetukset"
+             >
+               <Settings size={18} />
+             </button>
+           </div>
         </div>
       </header>
 
       {/* Main Display */}
-      <main className="flex-1 w-full flex flex-col items-center justify-center relative z-10 px-4">
+      <main className="flex-1 w-full flex flex-col items-center justify-center relative z-10 px-4 gap-6">
         
         {/* Digital Readout */}
-        <div className="mb-8 text-center">
+        <div className="text-center">
           <div className="text-6xl font-bold tracking-tighter tabular-nums relative inline-block">
             {formattedHeading}
             <span className="text-2xl absolute top-0 -right-6">°</span>
           </div>
-          <div className="text-xl mt-2 font-bold text-gray-300 tracking-[0.2em] border-t border-gray-700 pt-2 inline-block px-4">
+          <div className={`text-xl mt-2 font-bold tracking-[0.2em] border-t pt-2 inline-block px-4 transition-colors ${isNightMode ? 'border-red-900 text-red-700' : 'border-gray-700 text-gray-300'}`}>
             {getCardinalText(adjustedHeading)}
           </div>
-          {(compassSettings.invert || compassSettings.offset !== 0) && (
-            <div className="text-[10px] text-yellow-500 uppercase mt-2 font-bold tracking-widest">
-              [ KORJAUS: {compassSettings.invert ? 'KÄÄNTÖ ' : ''}{compassSettings.offset !== 0 ? `${compassSettings.offset > 0 ? '+' : ''}${compassSettings.offset}°` : ''} ]
-            </div>
-          )}
         </div>
 
         {/* Analog Compass */}
-        <CompassDial heading={adjustedHeading} />
+        <CompassDial heading={adjustedHeading} isNightMode={isNightMode} />
+
+        {/* Tactical Coordinate Display - NEW FEATURE */}
+        <button 
+          onClick={cycleCoordFormat}
+          className={`w-full max-w-[320px] p-3 border-2 flex items-center justify-between transition-all active:scale-95 group ${isNightMode ? 'border-red-900 bg-black/50 hover:bg-red-900/20' : 'border-gray-800 bg-black/50 hover:bg-gray-900'}`}
+        >
+          <div className="flex flex-col items-start">
+             <div className={`text-[10px] uppercase font-bold tracking-widest flex items-center gap-2 ${theme.textDim}`}>
+               <Crosshair size={12} />
+               <span>GPS // {gpsLoading ? 'ETSITÄÄN...' : coordFormat.toUpperCase()}</span>
+             </div>
+             <div className="text-lg font-bold tracking-tighter mt-1 font-mono">
+               {gpsError ? (
+                 <span className="text-red-500 text-sm">{gpsError}</span>
+               ) : gpsLoading || lat === null || lon === null ? (
+                 <span className="animate-pulse">--.----- --.-----</span>
+               ) : (
+                 formatCoordinates(lat, lon, coordFormat)
+               )}
+             </div>
+          </div>
+          <div className={`text-[10px] font-bold ${theme.accent} opacity-50 group-hover:opacity-100`}>
+             {accuracy ? `±${Math.round(accuracy)}m` : ''}
+          </div>
+        </button>
 
       </main>
 
       {/* Footer Controls */}
-      <footer className="w-full pb-safe z-10 bg-black/90 border-t border-gray-800">
+      <footer className={`w-full pb-safe z-10 border-t transition-colors duration-500 ${isNightMode ? 'bg-black border-red-900' : 'bg-black/90 border-gray-800'}`}>
         <div className="p-4 grid grid-cols-2 gap-3 max-w-md mx-auto">
           
           {/* Permission / Calibrate Button (Primary Action) */}
@@ -214,6 +275,7 @@ export default function App() {
               onClick={requestAccess}
               label="AKTIVOI ANTURIT"
               icon={<Navigation size={18} />}
+              isNightMode={isNightMode}
               className="col-span-2 border-dashed animate-pulse"
             />
           ) : (
@@ -222,12 +284,14 @@ export default function App() {
                 onClick={toggleFullscreen}
                 label={isFullscreen ? "PIENENNÄ" : "KOKO NÄYTTÖ"}
                 icon={isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+                isNightMode={isNightMode}
               />
               <TacticalButton 
                 onClick={toggleOrientationLock}
                 label={isLocked ? "VAPAUTA" : "LUKITSE"}
                 icon={isLocked ? <Lock size={18} /> : <LockOpen size={18} />}
-                className={isLocked ? 'bg-white text-black' : ''}
+                className={isLocked ? (isNightMode ? 'bg-red-600 text-black' : 'bg-white text-black') : ''}
+                isNightMode={isNightMode}
               />
               {/* Weather Button */}
               <TacticalButton 
@@ -235,6 +299,7 @@ export default function App() {
                 label="SÄÄTILA"
                 icon={<Cloud size={18} />}
                 className="col-span-2 mt-1"
+                isNightMode={isNightMode}
               />
             </>
           )}
@@ -244,7 +309,7 @@ export default function App() {
              <div className="col-span-2 text-center mt-2">
                <button 
                  onClick={handleCalibrationRequest}
-                 className="text-[10px] text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
+                 className={`text-[10px] uppercase tracking-widest transition-colors ${isNightMode ? 'text-red-900 hover:text-red-600' : 'text-gray-500 hover:text-white'}`}
                >
                  [ Kalibrointi & Asetukset ]
                </button>
@@ -253,7 +318,7 @@ export default function App() {
 
           {/* Copyright */}
           <div className="col-span-2 text-center mt-4">
-            <p className="text-[10px] text-gray-700 uppercase tracking-widest font-bold">
+            <p className={`text-[10px] uppercase tracking-widest font-bold ${isNightMode ? 'text-red-900' : 'text-gray-700'}`}>
               © {new Date().getFullYear()} Vesa Perasto
             </p>
           </div>
