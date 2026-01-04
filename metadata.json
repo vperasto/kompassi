@@ -1,5 +1,5 @@
 {
   "name": "Compassi",
-  "description": "Tarkka, minimalistinen ja korkean kontrastin taktinen kompassisovellus mobiililaitteille. Suunniteltu vaativaan käyttöön Suomen olosuhteissa.",
+  "description": "Edistynyt taktinen kompassisovellus. Sisältää MGRS/ETRS-koordinaatit, sääennusteen, yötilan ja tarkan suuntiman. Suunniteltu vaativaan käyttöön Suomen olosuhteissa.",
   "requestFramePermissions": []
 }

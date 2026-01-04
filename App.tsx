@@ -60,20 +60,12 @@ export default function App() {
   // Calculate adjusted heading based on settings
   const adjustedHeading = useMemo(() => {
     let h = rawHeading;
-    
-    // 1. Invert if needed (Mirror across N-S axis)
-    // If raw is 90 (East) and inverted, it becomes 270 (West)
     if (compassSettings.invert) {
       h = 360 - h;
     }
-
-    // 2. Apply Offset
     h = h + compassSettings.offset;
-
-    // 3. Normalize to 0-360
     h = h % 360;
     if (h < 0) h += 360;
-
     return h;
   }, [rawHeading, compassSettings]);
 
@@ -120,22 +112,12 @@ export default function App() {
       }
     } catch (e) {
       console.warn('Orientation lock failed', e);
-      // Specific error messaging
       if (e instanceof Error && e.message.includes('not supported')) {
          showNotification("Ei tuettu tällä laitteella");
       } else {
          showNotification("Lukitus vaatii koko näytön");
       }
     }
-  };
-
-  const handleCalibrationRequest = () => {
-    // Physical calibration instruction
-    showNotification("Tee 8-liike laitteella");
-    // Also request access again just in case permissions were lost
-    requestAccess();
-    // Open settings for manual offset as that's the "software calibration"
-    setTimeout(() => setIsSettingsOpen(true), 1500);
   };
 
   const cycleCoordFormat = () => {
@@ -165,8 +147,11 @@ export default function App() {
     cardinalText: isNightMode ? 'text-red-800' : 'text-gray-300'
   };
 
+  // Shared button style for header - Slightly reduced padding for tighter fit
+  const headerBtnClass = `p-2 sm:p-2.5 border transition-colors ${isNightMode ? 'border-red-900 hover:bg-red-900/20 text-red-600' : 'border-gray-700 hover:bg-gray-800 active:bg-white active:text-black'}`;
+
   return (
-    <div className={`min-h-[100dvh] h-[100dvh] w-full bg-black ${theme.text} flex flex-col items-center justify-between font-mono overflow-hidden relative transition-colors duration-500`}>
+    <div className={`h-[100dvh] w-full bg-black ${theme.text} flex flex-col font-mono overflow-hidden relative transition-colors duration-500`}>
       
       <Notification message={notification} onClear={() => setNotification(null)} isNightMode={isNightMode} />
 
@@ -178,6 +163,7 @@ export default function App() {
         onSave={saveSettings}
         currentSettings={compassSettings}
         isNightMode={isNightMode}
+        sensorStatus={{ active: !error, absolute: isAbsolute, error }}
       />
       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} isNightMode={isNightMode} />
 
@@ -190,53 +176,72 @@ export default function App() {
         }}
       />
 
-      {/* Header */}
-      <header className={`w-full p-4 pt-safe z-10 flex justify-between items-start border-b backdrop-blur-sm transition-colors duration-500 ${theme.bgHeader}`}>
+      {/* Header - Fixed Height */}
+      <header className={`w-full flex-none p-2 pt-safe z-10 flex justify-between items-center border-b backdrop-blur-sm transition-colors duration-500 ${theme.bgHeader}`}>
         <div>
-          <h1 className={`text-2xl font-bold tracking-widest border-l-4 pl-3 leading-none ${isNightMode ? 'border-red-600' : 'border-white'}`}>
+          <h1 className={`text-xl sm:text-2xl font-bold tracking-widest border-l-4 pl-3 leading-none ${isNightMode ? 'border-red-600' : 'border-white'}`}>
             COMPASSI
           </h1>
-          <p className={`text-xs mt-1 pl-4 tracking-wider ${theme.textDim}`}>
-            SYSTEM: {isAbsolute ? 'GPS/MAG (ABS)' : 'RELATIIVINEN'}
-          </p>
         </div>
-        <div className="flex flex-col items-end gap-2">
-           <div className={`text-xs font-bold ${error ? theme.error : theme.accent}`}>
-             {error ? 'VIRHE' : 'AKTIIVINEN'}
-           </div>
-           
-           <div className="flex gap-2">
+        
+        {/* Top Toolbar - All controls moved here */}
+        <div className="flex gap-1.5 sm:gap-2">
+             <button 
+                onClick={toggleOrientationLock}
+                className={`${headerBtnClass} ${isLocked ? (isNightMode ? 'bg-red-600 text-black' : 'bg-white text-black') : ''}`}
+                aria-label="Lukitse"
+              >
+                {isLocked ? <Lock size={18} /> : <LockOpen size={18} />}
+              </button>
+
+             <button 
+                onClick={() => setIsWeatherOpen(true)}
+                className={headerBtnClass}
+                aria-label="Sää"
+              >
+                <Cloud size={18} />
+              </button>
+
+             <button 
+                onClick={toggleFullscreen}
+                className={headerBtnClass}
+                aria-label="Koko näyttö"
+              >
+                {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+              </button>
+
              <button 
                 onClick={() => setIsInfoOpen(true)}
-                className={`p-2 border transition-colors ${isNightMode ? 'border-red-900 hover:bg-red-900/20 text-red-600' : 'border-gray-700 hover:bg-gray-800 active:bg-white active:text-black'}`}
+                className={headerBtnClass}
                 aria-label="Tietoja"
               >
                 <Info size={18} />
               </button>
+              
               <button 
                 onClick={() => setIsNightMode(!isNightMode)}
-                className={`p-2 border transition-colors ${isNightMode ? 'border-red-900 bg-red-900/20 text-red-500 hover:bg-red-900/40' : 'border-gray-700 hover:bg-gray-800 active:bg-white active:text-black'}`}
+                className={headerBtnClass}
                 aria-label="Yötila"
               >
                 {isNightMode ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
+             
              <button 
                onClick={() => setIsSettingsOpen(true)}
-               className={`p-2 border transition-colors ${isNightMode ? 'border-red-900 hover:bg-red-900/20 text-red-600' : 'border-gray-700 hover:bg-gray-800 active:bg-white active:text-black'}`}
+               className={headerBtnClass}
                aria-label="Asetukset"
              >
                <Settings size={18} />
              </button>
-           </div>
         </div>
       </header>
 
-      {/* Main Display */}
-      <main className="flex-1 w-full flex flex-col items-center justify-center relative z-10 px-4 gap-6">
+      {/* Main Display - Grows to fill space */}
+      <main className="flex-1 w-full flex flex-col items-center justify-center relative z-10 px-4 pb-safe gap-4 sm:gap-8">
         
         {/* Digital Readout */}
-        <div className="text-center">
-          <div className="text-6xl font-bold tracking-tighter tabular-nums relative inline-block">
+        <div className="text-center mt-4">
+          <div className="text-6xl sm:text-7xl font-bold tracking-tighter tabular-nums relative inline-block">
             {formattedHeading}
             <span className="text-2xl absolute top-0 -right-6">°</span>
           </div>
@@ -246,12 +251,14 @@ export default function App() {
         </div>
 
         {/* Analog Compass */}
-        <CompassDial heading={adjustedHeading} isNightMode={isNightMode} />
+        <div className="flex-1 w-full flex items-center justify-center min-h-0">
+           <CompassDial heading={adjustedHeading} isNightMode={isNightMode} />
+        </div>
 
-        {/* Tactical Coordinate Display */}
+        {/* Tactical Coordinate Display (Moved to bottom of Main) */}
         <button 
           onClick={cycleCoordFormat}
-          className={`w-full max-w-[320px] p-3 border-2 flex items-center justify-between transition-all active:scale-95 group ${isNightMode ? 'border-red-900 bg-black/50 hover:bg-red-900/20' : 'border-gray-800 bg-black/50 hover:bg-gray-900'}`}
+          className={`w-full max-w-[320px] mb-4 sm:mb-8 p-3 border-2 flex items-center justify-between transition-all active:scale-95 group flex-none ${isNightMode ? 'border-red-900 bg-black/50 hover:bg-red-900/20' : 'border-gray-800 bg-black/50 hover:bg-gray-900'}`}
         >
           <div className="flex flex-col items-start">
              <div className={`text-[10px] uppercase font-bold tracking-widest flex items-center gap-2 ${theme.textDim}`}>
@@ -275,66 +282,22 @@ export default function App() {
 
       </main>
 
-      {/* Footer Controls */}
-      {/* ADDED: padding-bottom increased to account for Android nav bars */}
-      <footer className={`w-full pb-[max(env(safe-area-inset-bottom),2rem)] z-10 border-t transition-colors duration-500 ${isNightMode ? 'bg-black border-red-900' : 'bg-black/90 border-gray-800'}`}>
-        <div className="p-4 pt-6 grid grid-cols-2 gap-3 max-w-md mx-auto">
-          
-          {/* Permission / Calibrate Button (Primary Action) */}
-          {!permissionGranted ? (
+      {/* Footer - ONLY visible if permission is missing */}
+      {!permissionGranted && (
+        <footer 
+          className={`w-full flex-none z-10 border-t transition-colors duration-500 pb-[calc(2rem+env(safe-area-inset-bottom))] ${isNightMode ? 'bg-black border-red-900' : 'bg-black/90 border-gray-800'}`}
+        >
+          <div className="p-4 pt-6 max-w-md mx-auto">
             <TacticalButton 
               onClick={requestAccess}
               label="AKTIVOI ANTURIT"
               icon={<Navigation size={18} />}
               isNightMode={isNightMode}
-              className="col-span-2 border-dashed animate-pulse"
+              className="w-full border-dashed animate-pulse"
             />
-          ) : (
-            <>
-              <TacticalButton 
-                onClick={toggleFullscreen}
-                label={isFullscreen ? "PIENENNÄ" : "KOKO NÄYTTÖ"}
-                icon={isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
-                isNightMode={isNightMode}
-              />
-              <TacticalButton 
-                onClick={toggleOrientationLock}
-                label={isLocked ? "VAPAUTA" : "LUKITSE"}
-                icon={isLocked ? <Lock size={18} /> : <LockOpen size={18} />}
-                className={isLocked ? (isNightMode ? 'bg-red-600 text-black' : 'bg-white text-black') : ''}
-                isNightMode={isNightMode}
-              />
-              {/* Weather Button */}
-              <TacticalButton 
-                onClick={() => setIsWeatherOpen(true)}
-                label="SÄÄTILA"
-                icon={<Cloud size={18} />}
-                className="col-span-2 mt-1"
-                isNightMode={isNightMode}
-              />
-            </>
-          )}
-
-          {/* Calibrate Text Link */}
-          {permissionGranted && (
-             <div className="col-span-2 text-center mt-2">
-               <button 
-                 onClick={handleCalibrationRequest}
-                 className={`text-[10px] uppercase tracking-widest transition-colors ${isNightMode ? 'text-red-900 hover:text-red-600' : 'text-gray-500 hover:text-white'}`}
-               >
-                 [ Kalibrointi & Asetukset ]
-               </button>
-             </div>
-          )}
-
-          {/* Copyright */}
-          <div className="col-span-2 text-center mt-4">
-            <p className={`text-[10px] uppercase tracking-widest font-bold ${isNightMode ? 'text-red-900' : 'text-gray-700'}`}>
-              © {new Date().getFullYear()} Vesa Perasto
-            </p>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }
