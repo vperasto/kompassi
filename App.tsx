@@ -5,9 +5,10 @@ import { CompassDial } from './components/CompassDial';
 import { TacticalButton } from './components/TacticalButton';
 import { WeatherModal } from './components/WeatherModal';
 import { SettingsModal } from './components/SettingsModal';
+import { InfoModal } from './components/InfoModal'; // Import InfoModal
 import { Notification } from './components/Notification';
 import { formatCoordinates } from './utils/geoUtils'; // Import Utils
-import { Maximize, Minimize, Navigation, Lock, LockOpen, Cloud, Settings, Eye, EyeOff, Crosshair } from 'lucide-react';
+import { Maximize, Minimize, Navigation, Lock, LockOpen, Cloud, Settings, Eye, EyeOff, Crosshair, Info } from 'lucide-react';
 
 type CoordFormat = 'decimal' | 'etrs' | 'mgrs' | 'maidenhead';
 
@@ -19,6 +20,7 @@ export default function App() {
   const [isLocked, setIsLocked] = useState(false);
   const [isWeatherOpen, setIsWeatherOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isInfoOpen, setIsInfoOpen] = useState(false); // Info Modal State
   const [notification, setNotification] = useState<string | null>(null);
   
   // Tactical Modes
@@ -177,6 +179,7 @@ export default function App() {
         currentSettings={compassSettings}
         isNightMode={isNightMode}
       />
+      <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} isNightMode={isNightMode} />
 
       {/* Background Grid Pattern for Tactical Look */}
       <div 
@@ -203,7 +206,14 @@ export default function App() {
            </div>
            
            <div className="flex gap-2">
-            <button 
+             <button 
+                onClick={() => setIsInfoOpen(true)}
+                className={`p-2 border transition-colors ${isNightMode ? 'border-red-900 hover:bg-red-900/20 text-red-600' : 'border-gray-700 hover:bg-gray-800 active:bg-white active:text-black'}`}
+                aria-label="Tietoja"
+              >
+                <Info size={18} />
+              </button>
+              <button 
                 onClick={() => setIsNightMode(!isNightMode)}
                 className={`p-2 border transition-colors ${isNightMode ? 'border-red-900 bg-red-900/20 text-red-500 hover:bg-red-900/40' : 'border-gray-700 hover:bg-gray-800 active:bg-white active:text-black'}`}
                 aria-label="Yötila"
@@ -238,7 +248,7 @@ export default function App() {
         {/* Analog Compass */}
         <CompassDial heading={adjustedHeading} isNightMode={isNightMode} />
 
-        {/* Tactical Coordinate Display - NEW FEATURE */}
+        {/* Tactical Coordinate Display */}
         <button 
           onClick={cycleCoordFormat}
           className={`w-full max-w-[320px] p-3 border-2 flex items-center justify-between transition-all active:scale-95 group ${isNightMode ? 'border-red-900 bg-black/50 hover:bg-red-900/20' : 'border-gray-800 bg-black/50 hover:bg-gray-900'}`}
@@ -266,8 +276,9 @@ export default function App() {
       </main>
 
       {/* Footer Controls */}
-      <footer className={`w-full pb-safe z-10 border-t transition-colors duration-500 ${isNightMode ? 'bg-black border-red-900' : 'bg-black/90 border-gray-800'}`}>
-        <div className="p-4 grid grid-cols-2 gap-3 max-w-md mx-auto">
+      {/* ADDED: padding-bottom increased to account for Android nav bars */}
+      <footer className={`w-full pb-[max(env(safe-area-inset-bottom),2rem)] z-10 border-t transition-colors duration-500 ${isNightMode ? 'bg-black border-red-900' : 'bg-black/90 border-gray-800'}`}>
+        <div className="p-4 pt-6 grid grid-cols-2 gap-3 max-w-md mx-auto">
           
           {/* Permission / Calibrate Button (Primary Action) */}
           {!permissionGranted ? (
