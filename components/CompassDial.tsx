@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { CardinalPoint } from '../types';
 
 interface CompassDialProps {
@@ -18,6 +18,29 @@ const CARDINALS: CardinalPoint[] = [
 ];
 
 export const CompassDial: React.FC<CompassDialProps> = ({ heading }) => {
+  // We keep track of a cumulative heading to allow smooth rotation across the 360/0 boundary.
+  // E.g. going from 359 to 1 should be +2 degrees, not -358 degrees.
+  const [displayHeading, setDisplayHeading] = useState(heading);
+
+  useEffect(() => {
+    setDisplayHeading((prev) => {
+      // Normalize previous value to 0-360 for comparison
+      let currentRotation = prev % 360;
+      if (currentRotation < 0) currentRotation += 360;
+
+      // Calculate the difference
+      let diff = heading - currentRotation;
+
+      // Find the shortest path
+      // If diff is > 180, it's shorter to go the other way (subtract 360)
+      if (diff > 180) diff -= 360;
+      // If diff is < -180, it's shorter to go the other way (add 360)
+      if (diff < -180) diff += 360;
+
+      return prev + diff;
+    });
+  }, [heading]);
+
   // Generate tick marks
   const ticks = useMemo(() => {
     const items = [];
@@ -42,7 +65,7 @@ export const CompassDial: React.FC<CompassDialProps> = ({ heading }) => {
       {/* Rotating Dial Container */}
       <div
         className="w-full h-full rounded-full border-[3px] border-white bg-black relative transition-transform duration-300 ease-out will-change-transform"
-        style={{ transform: `rotate(${-heading}deg)` }}
+        style={{ transform: `rotate(${-displayHeading}deg)` }}
       >
         {/* Inner Border Ring */}
         <div className="absolute inset-[4px] rounded-full border border-gray-600" />
