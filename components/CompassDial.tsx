@@ -7,7 +7,7 @@ interface CompassDialProps {
 
 const CARDINALS: CardinalPoint[] = [
   { label: 'P', degree: 0 },
-  { label: 'KI', degree: 45 },
+  { label: 'KO', degree: 45 },
   { label: 'I', degree: 90 },
   { label: 'KA', degree: 135 },
   { label: 'E', degree: 180 },
