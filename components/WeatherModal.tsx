@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Cloud, Wind, MapPin, Search, Loader2 } from 'lucide-react';
+import { X, Cloud, Wind, MapPin, Search, Loader2, Sunrise, Sunset } from 'lucide-react';
 
 interface WeatherData {
   temperature: number;
   windSpeed: number;
   windDirection: number;
+  sunrise: string;
+  sunset: string;
 }
 
 interface LocationData {
@@ -59,15 +61,24 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({ isOpen, onClose }) =
     setError(null);
     try {
       const res = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m&daily=sunrise,sunset&wind_speed_unit=ms&timezone=auto`
       );
       const data = await res.json();
       
-      if (data.current) {
+      if (data.current && data.daily) {
+        // Extract HH:MM from ISO string
+        const formatTime = (isoString: string) => {
+           if (!isoString) return '--:--';
+           const parts = isoString.split('T');
+           return parts.length > 1 ? parts[1] : isoString;
+        };
+
         setWeather({
           temperature: data.current.temperature_2m,
           windSpeed: data.current.wind_speed_10m,
-          windDirection: data.current.wind_direction_10m
+          windDirection: data.current.wind_direction_10m,
+          sunrise: formatTime(data.daily.sunrise[0]),
+          sunset: formatTime(data.daily.sunset[0])
         });
       }
     } catch (err) {
@@ -182,16 +193,18 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({ isOpen, onClose }) =
                 </button>
               </div>
 
-              {/* Weather Data */}
+              {/* Weather Data Grid */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="border border-gray-800 p-4 flex flex-col items-center justify-center text-center">
-                   <Cloud className="mb-2 text-gray-400" size={24} />
-                   <span className="text-3xl font-bold">{weather?.temperature}°C</span>
+                {/* Temp */}
+                <div className="border border-gray-800 p-4 flex flex-col items-center justify-center text-center h-24">
+                   <Cloud className="mb-2 text-gray-400" size={20} />
+                   <span className="text-2xl font-bold">{weather?.temperature}°C</span>
                    <span className="text-[10px] text-gray-500 uppercase mt-1">Lämpötila</span>
                 </div>
-                <div className="border border-gray-800 p-4 flex flex-col items-center justify-center text-center">
+                {/* Wind */}
+                <div className="border border-gray-800 p-4 flex flex-col items-center justify-center text-center h-24">
                    <div className="flex items-center gap-1 mb-2">
-                     <Wind className="text-gray-400" size={24} />
+                     <Wind className="text-gray-400" size={20} />
                      {weather && (
                        <div 
                          style={{ transform: `rotate(${weather.windDirection}deg)` }}
@@ -201,8 +214,20 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({ isOpen, onClose }) =
                        </div>
                      )}
                    </div>
-                   <span className="text-3xl font-bold">{weather?.windSpeed}</span>
+                   <span className="text-2xl font-bold">{weather?.windSpeed}</span>
                    <span className="text-[10px] text-gray-500 uppercase mt-1">m/s</span>
+                </div>
+                {/* Sunrise */}
+                 <div className="border border-gray-800 p-4 flex flex-col items-center justify-center text-center h-24">
+                   <Sunrise className="mb-2 text-gray-400" size={20} />
+                   <span className="text-2xl font-bold">{weather?.sunrise}</span>
+                   <span className="text-[10px] text-gray-500 uppercase mt-1">Nousu</span>
+                </div>
+                {/* Sunset */}
+                 <div className="border border-gray-800 p-4 flex flex-col items-center justify-center text-center h-24">
+                   <Sunset className="mb-2 text-gray-400" size={20} />
+                   <span className="text-2xl font-bold">{weather?.sunset}</span>
+                   <span className="text-[10px] text-gray-500 uppercase mt-1">Lasku</span>
                 </div>
               </div>
 
